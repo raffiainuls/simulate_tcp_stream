@@ -1,0 +1,6 @@
+ksqldb_cli_container: ksqldb-cli
+ksqldb_server_url: http://ksqldb-server:8088
+queries:
+  - tbl_sales_raw.sql
+  - tbl_sales_clean.sql
+
