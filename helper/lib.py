@@ -3,6 +3,8 @@ import pandas as pd
 from datetime import datetime, timedelta, timezone
 import os
 import numpy as np
+import socket
+import time
 
 def get_date_range(days_back, hours):
     """Mengembalikan rentang tanggal dalam format  (YYYY-MM-DD)."""
@@ -136,4 +138,89 @@ def combine_and_sort_csv(input_path: str) -> pd.DataFrame:
     combined_df = combined_df.sort_values(by='datetime')
     return combined_df
 
+def load_data(csv_path: str) -> pd.DataFrame:
+    if not os.path.exists(csv_path):
+        raise FileNotFoundError(f"[X] File tidak ditemukan: {csv_path}")
+    
+    df = pd.read_csv(csv_path, parse_dates=['datetime'])
+    df['time_only'] = df['datetime'].dt.strftime('%H:%M:%S')
+    return df
 
+def send_to_client(message: str, client_sockets: dict):
+    for client in client_sockets[:]:
+        try: 
+            client.sendall(message.encode())
+        except:
+            client_sockets.remove(client)
+
+
+def handle_new_connections(server_socket: socket.socket, client_sockets):
+    try:
+        client_socket, addr = server_socket.accept()
+        client_sockets.append(client_socket)
+        print(f"[INFO] Client terkoneksi dari {addr}")
+        return client_sockets
+    except BlockingIOError:
+        pass  # Tidak ada client baru saat ini
+
+# def broadcast_data(df: pd.DataFrame, send_to_client,client_sockets):
+#     now_time = datetime.now().strftime('%H:%M:%S')
+#     row = df[df['time_only'] == now_time]
+#     if not row.empty:
+#         for _, r in row.iterrows():
+#             msg = f"{r['datetime']},{r['open']},{r['high']},{r['low']},{r['close']},{r['symbol']}\n"
+#             print(f"[KIRIM] {msg.strip()}")
+#             send_to_client(msg,client_sockets)
+
+
+
+def broadcast_data(df: pd.DataFrame, send_to_client, client_sockets):
+    """Kirim data per detik mulai dari baris dengan waktu >= waktu sekarang."""
+
+    if df.empty:
+        print("[X] Data kosong.")
+        return
+
+    # Ambil waktu sekarang satu kali saja
+    now_time = datetime.now().strftime('%H:%M:%S')
+
+    # Cari index pertama yang waktu-nya >= sekarang
+    start_idx = None
+    for i, row in df.iterrows():
+        row_time = row['datetime'].strftime('%H:%M:%S')
+        if row_time >= now_time:
+            start_idx = i
+            break
+
+    if start_idx is None:
+        print(f"[X] Tidak ada baris dengan waktu >= {now_time}")
+        return
+
+    print(f"[INFO] Mulai mengirim data dari index {start_idx} (jam >= {now_time})")
+
+    # Mulai kirim data dari baris tersebut ke semua client
+    for i in range(start_idx, len(df)):
+        row = df.iloc[i]
+        msg = f"{row['datetime']},{row['open']},{row['high']},{row['low']},{row['close']},{row['symbol']}\n"
+        print(f"[KIRIM] {msg.strip()}")
+        send_to_client(msg, client_sockets)
+
+
+
+
+
+def start_server(csv_path: str, host:str, port: int, client_sockets, load_data, send_to_client, handle_new_connections, broadcast_data):
+    df = load_data(csv_path)
+
+    server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server.bind((host, port))
+    server.listen()
+    server.setblocking(False)
+
+    print(f"[INFO] Server aktif di {host}:{port}, siap kirim data per detik...")
+
+    while not client_sockets:
+        handle_new_connections(server, client_sockets)
+        time.sleep(0.5)
+
+    broadcast_data(df, send_to_client,client_sockets)
