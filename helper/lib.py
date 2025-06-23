@@ -47,6 +47,7 @@ def save_timeseries_to_csv(data, symbol, output_dir):
     print(f"[✓] Data {symbol} berhasil disimpan sebagai {filename}")
 
 
+
 def get_and_save_data(symbol, output_dir,TWELVE_API_KEY, interval="1min",hours=1, days_back=1):
 
     start_date, end_date = get_date_range(days_back=days_back, hours=hours)
@@ -204,6 +205,7 @@ def broadcast_data(df: pd.DataFrame, send_to_client, client_sockets):
         msg = f"{row['datetime']},{row['open']},{row['high']},{row['low']},{row['close']},{row['symbol']}\n"
         print(f"[KIRIM] {msg.strip()}")
         send_to_client(msg, client_sockets)
+        time.sleep(1)
 
 
 

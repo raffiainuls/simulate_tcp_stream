@@ -12,4 +12,4 @@ SELECT
   payload->open     AS open,
   payload->datetime + '_' + payload->symbol AS composite_key
 FROM raw_data_tcp
-PARTITION BY payload->datetime + '_' + payload->symbol;
+PARTITION BY payload->datetime + '_' + payload->symbol

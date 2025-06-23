@@ -109,6 +109,8 @@ services:
       KSQL_KSQL_STREAMS_AUTO_OFFSET_RESET: "earliest"
       KSQL_KSQL_QUERY_PULL_TABLE_SCAN_ENABLED: "true"  # Optional, untuk query ke TABLE
 
+
+
   ksqldb-cli:
     image: confluentinc/ksqldb-cli:latest
     container_name: ksqldb-cli

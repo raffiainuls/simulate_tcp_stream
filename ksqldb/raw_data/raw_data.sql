@@ -10,4 +10,4 @@ CREATE STREAM raw_data_tcp (
 ) WITH (
   KAFKA_TOPIC = 'raw_data_tcp',
   VALUE_FORMAT = 'JSON'
-);
+)
